@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>随机数生成器</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap');
+    
+    :root {
+      --primary: 234 179 8;
+    }
+    
+    body {
+      font-family: 'Inter', system-ui, -apple-system, "Microsoft YaHei", "PingFang SC", "Helvetica Neue", sans-serif;
+    }
+    
+    .font-mono {
+      font-family: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
+    }
+
+    .number-pill {
+      transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+      user-select: none;
+    }
+    
+    .number-pill:hover {
+      transform: translateY(-1px) scale(1.02);
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    }
+    
+    .number-pill:active {
+      transform: scale(0.98);
+    }
+
+    .dark .number-pill {
+      background-color: #1f2937;
+      border-color: #374151;
+    }
+
+    .segmented-btn {
+      transition: all 0.1s ease;
+    }
+
+    #decimalButtons .segmented-btn {
+      padding-left: 0.55rem;
+      padding-right: 0.55rem;
+    }
+    
+    .segmented-btn.active {
+      background-color: #eab308;
+      color: #1a1a1a;
+      font-weight: 600;
+      box-shadow: 0 1px 2px rgb(0 0 0 / 0.1);
+    }
+
+    .dark .segmented-btn.active {
+      background-color: #fde047;
+      color: #1a1a1a;
+    }
+
+    .result-card {
+      animation: fadeInUp 0.2s ease-out forwards;
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .toast {
+      animation: slideInRight 0.2s ease-out forwards;
+    }
+
+    .stat-value {
+      font-variant-numeric: tabular-nums;
+    }
+
+    .rng-canvas {
+      image-rendering: crisp-edges;
+    }
+
+    .form-input {
+      transition: all 0.1s ease;
+    }
+    
+    .form-input:focus {
+      outline: none;
+      ring: 2px;
+      ring-color: #eab308;
+      border-color: #eab308;
+    }
+
+    .dark .form-input:focus {
+      ring-color: #fde047;
+      border-color: #fde047;
+    }
+
+    .pill-grid {
+      scrollbar-width: thin;
+      scrollbar-color: #d1d5db #f3f4f6;
+    }
+    
+    .dark .pill-grid {
+      scrollbar-color: #4b5563 #1f2937;
+    }
+
+    .history-item {
+      transition: all 0.1s ease;
+    }
+    
+    .history-item:hover {
+      background-color: #f8fafc;
+    }
+    
+    .dark .history-item:hover {
+      background-color: #1f2937;
+    }
+
+    .section-title {
+      font-size: 0.75rem;
+      letter-spacing: 0.025em;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: #64748b;
+    }
+    
+    .dark .section-title {
+      color: #64748b;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 min-h-screen">
+  <!-- Header -->
+  <header class="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-x-3">
+        <div class="w-9 h-9 bg-yellow-400 dark:bg-yellow-300 rounded-xl flex items-center justify-center shadow-inner">
+          <i class="fa-solid fa-dice text-slate-900 text-xl"></i>
+        </div>
+        <div>
+          <h1 class="text-2xl font-semibold tracking-tight">随机数生成器</h1>
+          <p class="text-xs text-slate-500 dark:text-slate-400 -mt-0.5">本地 · 离线 · 完全隐私</p>
+        </div>
+      </div>
+      
+      <div class="flex items-center gap-x-2">
+        <button id="darkToggle"
+                class="flex items-center gap-x-2 px-3 py-1.5 text-sm font-medium rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 active:bg-slate-200 transition-colors">
+          <i class="fa-solid fa-moon dark:hidden"></i>
+          <i class="fa-solid fa-sun hidden dark:inline"></i>
+          <span class="hidden sm:inline text-xs font-medium" id="themeLabel">深色</span>
+        </button>
+        
+        <button onclick="showHelp()"
+                class="flex items-center gap-x-2 px-3 py-1.5 text-sm font-medium rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 active:bg-slate-200 transition-colors">
+          <i class="fa-solid fa-question-circle"></i>
+          <span class="hidden sm:inline text-xs font-medium">帮助</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-6 py-8">
+    <!-- Controls Card -->
+    <div class="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 p-8 mb-8">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-6">
+        
+        <!-- Bounds -->
+        <div class="lg:col-span-2">
+          <div class="section-title mb-2">数值区间</div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label for="lowerBound" class="block text-sm font-medium mb-1.5 text-slate-600 dark:text-slate-300">下界</label>
+              <input type="number" id="lowerBound" step="any" value="1" 
+                     class="form-input w-full px-4 py-3 text-lg font-medium rounded-2xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 focus:border-yellow-400 dark:focus:border-yellow-300">
+            </div>
+            <div>
+              <label for="upperBound" class="block text-sm font-medium mb-1.5 text-slate-600 dark:text-slate-300">上界</label>
+              <input type="number" id="upperBound" step="any" value="100" 
+                     class="form-input w-full px-4 py-3 text-lg font-medium rounded-2xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 focus:border-yellow-400 dark:focus:border-yellow-300">
+            </div>
+          </div>
+          <div id="boundError" class="hidden mt-2 text-sm text-red-500 dark:text-red-400 flex items-center gap-x-1.5">
+            <i class="fa-solid fa-exclamation-circle"></i>
+            <span>下界不能大于上界</span>
+          </div>
+        </div>
+
+        <!-- Count -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label for="countInput" class="text-sm font-medium text-slate-600 dark:text-slate-300">生成数量</label>
+            <span id="countValue" class="font-mono text-sm font-semibold tabular-nums bg-slate-100 dark:bg-slate-700 px-2.5 py-0.5 rounded-xl">10</span>
+          </div>
+          <div class="flex items-center gap-x-3">
+            <input type="range" id="countSlider" min="1" max="500" step="1" value="10"
+                   class="flex-1 accent-yellow-400 dark:accent-yellow-300">
+            <input type="number" id="countInput" min="1" max="500" value="10"
+                   class="form-input w-20 px-3 py-2 text-center font-mono font-medium rounded-2xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900">
+          </div>
+          <div class="text-[10px] text-slate-400 mt-1">最多 500 个</div>
+        </div>
+
+        <!-- Decimals -->
+        <div>
+          <label class="block text-sm font-medium mb-1.5 text-slate-600 dark:text-slate-300">小数位数</label>
+          <div class="flex flex-wrap gap-1" id="decimalButtons">
+            <button data-decimals="0" class="segmented-btn active py-2 text-sm font-medium rounded-2xl border border-yellow-400 dark:border-yellow-300 bg-yellow-400 text-slate-900 min-w-[3.1rem]">0 (整数)</button>
+            <button data-decimals="1" class="segmented-btn py-2 text-sm font-medium rounded-2xl border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 min-w-[2rem]">1</button>
+            <button data-decimals="2" class="segmented-btn py-2 text-sm font-medium rounded-2xl border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 min-w-[2rem]">2</button>
+            <button data-decimals="3" class="segmented-btn py-2 text-sm font-medium rounded-2xl border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 min-w-[2rem]">3</button>
+            <button data-decimals="4" class="segmented-btn py-2 text-sm font-medium rounded-2xl border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 min-w-[2rem]">4</button>
+            <button data-decimals="5" class="segmented-btn py-2 text-sm font-medium rounded-2xl border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 min-w-[2rem]">5</button>
+            <button data-decimals="6" class="segmented-btn py-2 text-sm font-medium rounded-2xl border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 min-w-[2rem]">6</button>
+            <button data-decimals="7" class="segmented-btn py-2 text-sm font-medium rounded-2xl border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 min-w-[2rem]">7</button>
+            <button data-decimals="8" class="segmented-btn py-2 text-sm font-medium rounded-2xl border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 min-w-[2rem]">8</button>
+          </div>
+        </div>
+
+        <!-- Advanced Options -->
+        <div class="lg:col-span-2 pt-2">
+          <details class="group" id="advancedDetails">
+            <summary class="flex items-center gap-x-2 cursor-pointer text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 select-none">
+              <i class="fa-solid fa-sliders-h w-4 transition-transform group-open:rotate-180"></i>
+              <span>高级选项</span>
+            </summary>
+            
+            <div class="mt-4 pl-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+              <!-- Unique -->
+              <div class="flex items-start gap-x-3">
+                <div class="pt-0.5">
+                  <input type="checkbox" id="uniqueCheck" class="w-4 h-4 accent-yellow-400 dark:accent-yellow-300 rounded">
+                </div>
+                <div class="flex-1">
+                  <label for="uniqueCheck" class="text-sm font-medium cursor-pointer">生成唯一值（无重复）</label>
+                  <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">仅在小数位数为 0（整数）时可用。会自动跳过已出现的数字。</p>
+                </div>
+              </div>
+
+              <!-- Seed -->
+              <div>
+                <div class="flex items-center gap-x-3 mb-2">
+                  <input type="checkbox" id="seedCheck" class="w-4 h-4 accent-yellow-400 dark:accent-yellow-300 rounded">
+                  <label for="seedCheck" class="text-sm font-medium cursor-pointer">使用随机种子（可复现）</label>
+                </div>
+                <div class="flex items-center gap-x-2">
+                  <input type="number" id="seedInput" placeholder="例如 12345" disabled
+                         class="form-input flex-1 px-3 py-2 text-sm font-mono rounded-2xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400">
+                  <button onclick="randomizeSeed()" 
+                          class="px-3 py-2 text-xs font-medium rounded-2xl border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 active:bg-slate-100 transition-colors">
+                    <i class="fa-solid fa-sync mr-1"></i>随机
+                  </button>
+                </div>
+                <p class="text-[10px] text-slate-400 mt-1">相同种子 + 相同参数 = 完全相同的结果序列</p>
+              </div>
+            </div>
+          </details>
+        </div>
+      </div>
+
+      <!-- Quick Presets -->
+      <div class="mt-6 pt-6 border-t border-slate-100 dark:border-slate-700">
+        <div class="section-title mb-2">快速预设</div>
+        <div class="flex flex-wrap gap-2">
+          <button onclick="applyPreset(1, 100, 10, 0)" class="px-3.5 py-1.5 text-xs font-medium rounded-2xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 transition-colors">1 ~ 100（整数）</button>
+          <button onclick="applyPreset(0, 1, 8, 4)" class="px-3.5 py-1.5 text-xs font-medium rounded-2xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 transition-colors">0 ~ 1（4位小数）</button>
+          <button onclick="applyPreset(1, 6, 5, 0)" class="px-3.5 py-1.5 text-xs font-medium rounded-2xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 transition-colors">骰子 1-6</button>
+          <button onclick="applyPreset(-10, 10, 8, 2)" class="px-3.5 py-1.5 text-xs font-medium rounded-2xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 transition-colors">-10 ~ 10（2位小数）</button>
+          <button onclick="applyPreset(0.5, 99.5, 6, 1)" class="px-3.5 py-1.5 text-xs font-medium rounded-2xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 transition-colors">0.5 ~ 99.5</button>
+        </div>
+      </div>
+
+      <!-- Generate Button -->
+      <div class="mt-8">
+        <button id="generateBtn"
+                onclick="generateNumbers()"
+                class="w-full h-14 bg-yellow-400 hover:bg-yellow-300 active:bg-yellow-500 dark:bg-yellow-300 dark:hover:bg-yellow-200 dark:active:bg-yellow-400 transition-all text-slate-900 font-semibold text-lg rounded-2xl flex items-center justify-center gap-x-3 shadow-sm active:scale-[0.985]">
+          <i class="fa-solid fa-magic mr-1"></i>
+          <span>生成随机数</span>
+        </button>
+        <div id="generateError" class="hidden mt-3 text-center text-sm text-red-500 dark:text-red-400"></div>
+      </div>
+    </div>
+
+    <!-- Results Area -->
+    <div id="resultsSection" class="hidden">
+      <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+        
+        <!-- Main Results + Histogram -->
+        <div class="xl:col-span-8 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm p-6">
+          <!-- Results Header -->
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <span class="font-semibold">生成结果</span>
+              <span id="resultCountBadge" 
+                    class="ml-2 px-2.5 py-0.5 text-xs font-mono font-semibold bg-yellow-100 dark:bg-yellow-900/60 text-yellow-700 dark:text-yellow-300 rounded-2xl align-middle"></span>
+            </div>
+            
+            <div class="flex items-center gap-x-2">
+              <button onclick="copyAllResults()" 
+                      class="flex items-center gap-x-1.5 px-3 py-1.5 text-xs font-medium rounded-2xl border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 active:bg-slate-100 transition-colors">
+                <i class="fa-solid fa-copy"></i>
+                <span>复制全部</span>
+              </button>
+              <button onclick="downloadTxt()" 
+                      class="flex items-center gap-x-1.5 px-3 py-1.5 text-xs font-medium rounded-2xl border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 active:bg-slate-100 transition-colors">
+                <i class="fa-solid fa-file-lines"></i>
+                <span>TXT</span>
+              </button>
+              <button onclick="downloadCsv()" 
+                      class="flex items-center gap-x-1.5 px-3 py-1.5 text-xs font-medium rounded-2xl border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 active:bg-slate-100 transition-colors">
+                <i class="fa-solid fa-file-csv"></i>
+                <span>CSV</span>
+              </button>
+              <button onclick="clearResults()" 
+                      class="flex items-center gap-x-1.5 px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-2xl border border-red-200 dark:border-red-900/40 transition-colors">
+                <i class="fa-solid fa-trash"></i>
+                <span>清空</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Stats -->
+          <div id="statsBar" class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5 text-sm">
+            <!-- Populated by JS -->
+          </div>
+
+          <!-- Number Pills -->
+          <div id="pillsContainer" 
+               class="pill-grid max-h-[280px] overflow-auto p-3 bg-slate-50 dark:bg-slate-900/60 rounded-2xl border border-slate-100 dark:border-slate-700 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2">
+          </div>
+
+          <!-- Histogram -->
+          <div class="mt-6">
+            <details open id="histogramDetails">
+              <summary class="flex items-center gap-x-2 cursor-pointer text-sm font-semibold text-slate-600 dark:text-slate-300 mb-3 select-none">
+                <i class="fa-solid fa-chart-bar"></i>
+                <span>数值分布可视化</span>
+              </summary>
+              <div class="bg-slate-50 dark:bg-slate-900/70 rounded-2xl p-4 border border-slate-100 dark:border-slate-700">
+                <canvas id="histogramCanvas" width="600" height="160" class="rng-canvas w-full h-auto max-h-[160px]"></canvas>
+                <div class="text-[10px] text-center text-slate-400 mt-2">柱状图显示各区间出现频率（约 12 个区间）</div>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <!-- History Sidebar -->
+        <div class="xl:col-span-4 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm p-6 flex flex-col">
+          <div class="flex items-center justify-between mb-3">
+            <div class="font-semibold text-sm flex items-center gap-x-2">
+              <i class="fa-solid fa-history"></i>
+              <span>最近生成记录</span>
+            </div>
+            <button onclick="clearHistory()" 
+                    class="text-xs px-2.5 py-1 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors">
+              清空
+            </button>
+          </div>
+
+          <div id="historyList" class="flex-1 space-y-1.5 overflow-auto text-sm min-h-[120px]">
+            <!-- Populated by JS -->
+          </div>
+          
+          <div class="text-[10px] text-center text-slate-400 pt-3 mt-auto border-t border-slate-100 dark:border-slate-700">
+            最多保存 5 条 · 数据仅存在本地
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State Hint -->
+    <div id="emptyHint" class="text-center py-10 text-slate-400 dark:text-slate-500 text-sm">
+      <i class="fa-solid fa-dice text-3xl mb-3 opacity-30"></i>
+      <div>设置参数后点击「生成随机数」开始</div>
+    </div>
+  </main>
+
+  <footer class="max-w-6xl mx-auto px-6 pb-8 text-center">
+    <p class="text-xs text-slate-400 dark:text-slate-500">
+      所有计算均在您的浏览器本地完成 • 不会上传任何数据 • 可直接保存此文件离线使用
+    </p>
+  </footer>
+
+  <!-- Toast Container -->
+  <div id="toastContainer" class="fixed top-5 right-5 z-[100] space-y-2"></div>
+
+  <script>
+    // ==================== Tailwind Script ====================
+    function initTailwind() {
+      document.documentElement.classList.toggle('dark', localStorage.getItem('rng_dark') === 'true' || 
+        (!localStorage.getItem('rng_dark') && window.matchMedia('(prefers-color-scheme: dark)').matches));
+      
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {}
+        }
+      };
+    }
+
+    // ==================== State ====================
+    let currentResults = [];
+    let currentParams = null;
+    let history = [];
+
+    // ==================== PRNG (mulberry32) ====================
+    function mulberry32(a) {
+      return function() {
+        a |= 0;
+        a = a + 0x6D2B79F5 | 0;
+        let t = Math.imul(a ^ a >>> 15, 1 | a);
+        t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      };
+    }
+
+    // ==================== Core RNG Logic ====================
+    function generateRandomNumbers(lower, upper, count, decimals, unique, seedValue) {
+      const results = [];
+      const useSeed = (seedValue !== null && seedValue !== undefined && seedValue !== '');
+      const rng = useSeed ? mulberry32(Number(seedValue)) : Math.random;
+
+      const isIntegerMode = decimals === 0;
+
+      if (isIntegerMode && unique) {
+        // Unique integer path - rejection sampling
+        const minInt = Math.ceil(lower);
+        const maxInt = Math.floor(upper);
+        const rangeSize = maxInt - minInt + 1;
+
+        if (rangeSize < count) {
+          throw new Error(`区间内可选唯一整数数量不足（最多 ${rangeSize} 个）`);
+        }
+
+        const used = new Set();
+        while (results.length < count) {
+          const n = Math.floor(rng() * rangeSize) + minInt;
+          if (!used.has(n)) {
+            used.add(n);
+            results.push(n.toString());
+          }
+        }
+      } else if (isIntegerMode) {
+        // Normal integer path (inclusive)
+        const minInt = Math.ceil(lower);
+        const maxInt = Math.floor(upper);
+        const rangeSize = maxInt - minInt + 1;
+
+        for (let i = 0; i < count; i++) {
+          const n = Math.floor(rng() * rangeSize) + minInt;
+          results.push(n.toString());
+        }
+      } else {
+        // Float path
+        const range = upper - lower;
+        for (let i = 0; i < count; i++) {
+          const n = rng() * range + lower;
+          results.push(n.toFixed(decimals));
+        }
+      }
+
+      return results;
+    }
+
+    // ==================== Validation ====================
+    function validateInputs() {
+      const lower = parseFloat(document.getElementById('lowerBound').value);
+      const upper = parseFloat(document.getElementById('upperBound').value);
+      const count = parseInt(document.getElementById('countInput').value, 10);
+      const decimals = getCurrentDecimals();
+      const unique = document.getElementById('uniqueCheck').checked;
+      const seedCheck = document.getElementById('seedCheck').checked;
+      const seedVal = document.getElementById('seedInput').value.trim();
+
+      const boundError = document.getElementById('boundError');
+      const genError = document.getElementById('generateError');
+
+      boundError.classList.add('hidden');
+      genError.classList.add('hidden');
+
+      if (isNaN(lower) || isNaN(upper)) {
+        genError.textContent = '请填写有效的上下界';
+        genError.classList.remove('hidden');
+        return null;
+      }
+      if (lower > upper) {
+        boundError.classList.remove('hidden');
+        return null;
+      }
+      if (isNaN(count) || count < 1 || count > 500) {
+        genError.textContent = '生成数量必须在 1~500 之间';
+        genError.classList.remove('hidden');
+        return null;
+      }
+      if (decimals === 0 && unique) {
+        const minInt = Math.ceil(lower);
+        const maxInt = Math.floor(upper);
+        if (maxInt - minInt + 1 < count) {
+          genError.textContent = `唯一整数模式下，区间最多只能生成 ${maxInt - minInt + 1} 个不同数值`;
+          genError.classList.remove('hidden');
+          return null;
+        }
+      }
+      if (seedCheck && (!seedVal || isNaN(Number(seedVal)))) {
+        genError.textContent = '请填写有效的随机种子（整数）';
+        genError.classList.remove('hidden');
+        return null;
+      }
+
+      return {
+        lower, upper, count, decimals,
+        unique: decimals === 0 && unique,
+        seed: seedCheck ? Number(seedVal) : null
+      };
+    }
+
+    function getCurrentDecimals() {
+      const activeBtn = document.querySelector('#decimalButtons .segmented-btn.active');
+      return activeBtn ? parseInt(activeBtn.dataset.decimals, 10) : 0;
+    }
+
+    // ==================== UI Helpers ====================
+    function showToast(message, isError = false) {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `toast flex items-center gap-x-2 px-4 py-3 rounded-2xl shadow-lg text-sm font-medium border ${isError 
+        ? 'bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800 text-red-600 dark:text-red-300' 
+        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100'}`;
+      
+      toast.innerHTML = `
+        <i class="fa-solid ${isError ? 'fa-exclamation-circle text-red-500' : 'fa-check-circle text-emerald-500'}"></i>
+        <span>${message}</span>
+      `;
+      
+      container.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.style.transition = 'all 0.2s ease';
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 150);
+      }, 2200);
+    }
+
+    function updateCountDisplay() {
+      const val = document.getElementById('countInput').value;
+      document.getElementById('countValue').textContent = val;
+      document.getElementById('countSlider').value = val;
+    }
+
+    function syncCount(fromSlider) {
+      const slider = document.getElementById('countSlider');
+      const input = document.getElementById('countInput');
+      
+      if (fromSlider) {
+        input.value = slider.value;
+      } else {
+        let v = parseInt(input.value, 10);
+        if (isNaN(v)) v = 1;
+        if (v < 1) v = 1;
+        if (v > 500) v = 500;
+        input.value = v;
+        slider.value = v;
+      }
+      document.getElementById('countValue').textContent = input.value;
+    }
+
+    function setupDecimalButtons() {
+      const container = document.getElementById('decimalButtons');
+      const buttons = container.querySelectorAll('.segmented-btn');
+      
+      buttons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          buttons.forEach(b => b.classList.remove('active', 'border-yellow-400', 'dark:border-yellow-300'));
+          btn.classList.add('active', 'border-yellow-400', 'dark:border-yellow-300');
+          
+          // Toggle unique availability
+          const decimals = parseInt(btn.dataset.decimals, 10);
+          const uniqueCheck = document.getElementById('uniqueCheck');
+          const uniqueLabel = uniqueCheck.parentElement.parentElement;
+          
+          if (decimals === 0) {
+            uniqueCheck.disabled = false;
+            uniqueLabel.style.opacity = '1';
+          } else {
+            uniqueCheck.checked = false;
+            uniqueCheck.disabled = true;
+            uniqueLabel.style.opacity = '0.5';
+          }
+        });
+      });
+    }
+
+    function setupAdvancedControls() {
+      const seedCheck = document.getElementById('seedCheck');
+      const seedInput = document.getElementById('seedInput');
+      
+      seedCheck.addEventListener('change', () => {
+        seedInput.disabled = !seedCheck.checked;
+        if (seedCheck.checked && !seedInput.value) {
+          seedInput.value = Math.floor(Math.random() * 1000000);
+        }
+      });
+
+      // Unique disabled by default until decimals=0
+      const uniqueCheck = document.getElementById('uniqueCheck');
+      uniqueCheck.disabled = true;
+      uniqueCheck.parentElement.parentElement.style.opacity = '0.5';
+    }
+
+    function setupCountControls() {
+      const slider = document.getElementById('countSlider');
+      const input = document.getElementById('countInput');
+
+      slider.addEventListener('input', () => syncCount(true));
+      input.addEventListener('input', () => syncCount(false));
+      input.addEventListener('blur', () => syncCount(false));
+    }
+
+    function setupBoundValidation() {
+      const lower = document.getElementById('lowerBound');
+      const upper = document.getElementById('upperBound');
+      const err = document.getElementById('boundError');
+
+      function check() {
+        const l = parseFloat(lower.value);
+        const u = parseFloat(upper.value);
+        if (!isNaN(l) && !isNaN(u) && l > u) {
+          err.classList.remove('hidden');
+        } else {
+          err.classList.add('hidden');
+        }
+      }
+
+      lower.addEventListener('input', check);
+      upper.addEventListener('input', check);
+    }
+
+    function randomizeSeed() {
+      const input = document.getElementById('seedInput');
+      const check = document.getElementById('seedCheck');
+      input.value = Math.floor(Math.random() * 2147483647);
+      check.checked = true;
+      input.disabled = false;
+    }
+
+    function applyPreset(lower, upper, count, decimals) {
+      document.getElementById('lowerBound').value = lower;
+      document.getElementById('upperBound').value = upper;
+      document.getElementById('countInput').value = count;
+      document.getElementById('countSlider').value = count;
+      document.getElementById('countValue').textContent = count;
+
+      // Set decimals
+      const btns = document.querySelectorAll('#decimalButtons .segmented-btn');
+      btns.forEach(b => {
+        b.classList.remove('active', 'border-yellow-400', 'dark:border-yellow-300');
+        if (parseInt(b.dataset.decimals) === decimals) {
+          b.classList.add('active', 'border-yellow-400', 'dark:border-yellow-300');
+        }
+      });
+
+      // Update unique state
+      const uniqueCheck = document.getElementById('uniqueCheck');
+      const container = uniqueCheck.parentElement.parentElement;
+      if (decimals === 0) {
+        uniqueCheck.disabled = false;
+        container.style.opacity = '1';
+      } else {
+        uniqueCheck.checked = false;
+        uniqueCheck.disabled = true;
+        container.style.opacity = '0.5';
+      }
+
+      // Clear previous errors
+      document.getElementById('boundError').classList.add('hidden');
+      document.getElementById('generateError').classList.add('hidden');
+
+      // Auto generate for convenience
+      setTimeout(() => {
+        generateNumbers();
+      }, 60);
+    }
+
+    // ==================== Results Rendering ====================
+    function renderStats(results, decimals) {
+      const container = document.getElementById('statsBar');
+      if (!results.length) {
+        container.innerHTML = '';
+        return;
+      }
+
+      const nums = results.map(r => parseFloat(r));
+      const min = Math.min(...nums);
+      const max = Math.max(...nums);
+      const sum = nums.reduce((a, b) => a + b, 0);
+      const avg = sum / nums.length;
+
+      const fmt = (n) => n.toFixed(decimals);
+
+      container.innerHTML = `
+        <div class="bg-slate-50 dark:bg-slate-900/60 rounded-2xl px-4 py-3 border border-slate-100 dark:border-slate-700">
+          <div class="text-xs text-slate-500">最小值</div>
+          <div class="font-mono text-lg font-semibold tabular-nums stat-value">${fmt(min)}</div>
+        </div>
+        <div class="bg-slate-50 dark:bg-slate-900/60 rounded-2xl px-4 py-3 border border-slate-100 dark:border-slate-700">
+          <div class="text-xs text-slate-500">最大值</div>
+          <div class="font-mono text-lg font-semibold tabular-nums stat-value">${fmt(max)}</div>
+        </div>
+        <div class="bg-slate-50 dark:bg-slate-900/60 rounded-2xl px-4 py-3 border border-slate-100 dark:border-slate-700">
+          <div class="text-xs text-slate-500">平均值</div>
+          <div class="font-mono text-lg font-semibold tabular-nums stat-value">${fmt(avg)}</div>
+        </div>
+        <div class="bg-slate-50 dark:bg-slate-900/60 rounded-2xl px-4 py-3 border border-slate-100 dark:border-slate-700">
+          <div class="text-xs text-slate-500">范围</div>
+          <div class="font-mono text-lg font-semibold tabular-nums stat-value">${fmt(max - min)}</div>
+        </div>
+      `;
+    }
+
+    function renderPills(results) {
+      const container = document.getElementById('pillsContainer');
+      container.innerHTML = '';
+
+      results.forEach((val, idx) => {
+        const pill = document.createElement('div');
+        pill.className = `number-pill cursor-pointer select-none px-3.5 py-2 text-center font-mono font-medium text-sm rounded-2xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-yellow-300 dark:hover:border-yellow-400`;
+        pill.textContent = val;
+        pill.title = '点击复制';
+        
+        pill.addEventListener('click', () => {
+          navigator.clipboard.writeText(val).then(() => {
+            const orig = pill.style.backgroundColor;
+            pill.style.backgroundColor = '#fef08c';
+            setTimeout(() => {
+              pill.style.backgroundColor = orig || '';
+            }, 280);
+            showToast(`已复制：${val}`);
+          }).catch(() => {
+            // Fallback
+            const ta = document.createElement('textarea');
+            ta.value = val;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            showToast(`已复制：${val}`);
+          });
+        });
+
+        container.appendChild(pill);
+      });
+    }
+
+    function renderHistogram(results, decimals) {
+      const canvas = document.getElementById('histogramCanvas');
+      const ctx = canvas.getContext('2d', { alpha: true });
+      const w = canvas.width;
+      const h = canvas.height;
+
+      ctx.clearRect(0, 0, w, h);
+
+      if (!results || results.length === 0) return;
+
+      const nums = results.map(r => parseFloat(r));
+      const min = Math.min(...nums);
+      const max = Math.max(...nums);
+
+      if (min === max) {
+        // All same value
+        ctx.fillStyle = '#eab308';
+        ctx.fillRect(40, h - 70, w - 80, 50);
+        ctx.fillStyle = '#334155';
+        ctx.font = '12px system-ui';
+        ctx.textAlign = 'center';
+        ctx.fillText(`全部为 ${min.toFixed(decimals)}`, w / 2, h - 40);
+        return;
+      }
+
+      const binCount = Math.min(12, Math.max(6, Math.ceil(results.length / 4)));
+      const binSize = (max - min) / binCount;
+
+      const counts = new Array(binCount).fill(0);
+      for (const n of nums) {
+        let idx = Math.floor((n - min) / binSize);
+        if (idx >= binCount) idx = binCount - 1;
+        counts[idx]++;
+      }
+
+      const maxCount = Math.max(...counts);
+      const padding = 32;
+      const chartH = h - padding * 2;
+      const barWidth = (w - padding * 2) / binCount;
+
+      const isDark = document.documentElement.classList.contains('dark');
+
+      // Axes
+      ctx.strokeStyle = isDark ? '#475569' : '#cbd5e1';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(padding, h - padding);
+      ctx.lineTo(w - padding, h - padding);
+      ctx.stroke();
+
+      // Bars
+      ctx.fillStyle = isDark ? '#fde047' : '#eab308';
+
+      for (let i = 0; i < binCount; i++) {
+        const barH = (counts[i] / maxCount) * (chartH - 20);
+        const x = padding + i * barWidth + 2;
+        const y = h - padding - barH;
+
+        ctx.fillRect(x, y, Math.max(2, barWidth - 4), barH);
+
+        // Labels (sparse)
+        if (binCount <= 8 || i % 2 === 0) {
+          const labelVal = (min + i * binSize).toFixed(decimals);
+          ctx.fillStyle = isDark ? '#64748b' : '#64748b';
+          ctx.font = '10px system-ui';
+          ctx.textAlign = 'center';
+          ctx.fillText(labelVal, x + (barWidth - 4) / 2, h - padding + 14);
+          ctx.fillStyle = isDark ? '#fde047' : '#eab308';
+        }
+      }
+
+      // Mean line
+      const mean = nums.reduce((a, b) => a + b, 0) / nums.length;
+      const meanX = padding + ((mean - min) / (max - min)) * (w - padding * 2);
+      
+      ctx.strokeStyle = isDark ? '#f43f5e' : '#e11d48';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(meanX, h - padding - chartH + 10);
+      ctx.lineTo(meanX, h - padding - 5);
+      ctx.stroke();
+
+      // Legend
+      ctx.fillStyle = isDark ? '#f43f5e' : '#e11d48';
+      ctx.font = '10px system-ui';
+      ctx.textAlign = 'left';
+      ctx.fillText('均值', meanX + 4, h - padding - chartH + 18);
+    }
+
+    function renderResults(results, params) {
+      currentResults = results;
+      currentParams = params;
+
+      const section = document.getElementById('resultsSection');
+      const hint = document.getElementById('emptyHint');
+      
+      section.classList.remove('hidden');
+      hint.classList.add('hidden');
+
+      document.getElementById('resultCountBadge').textContent = `${results.length} 个`;
+
+      renderStats(results, params.decimals);
+      renderPills(results);
+      renderHistogram(results, params.decimals);
+
+      // Save to history
+      saveToHistory(params, results);
+      renderHistoryList();
+    }
+
+    function clearResults() {
+      currentResults = [];
+      currentParams = null;
+      
+      document.getElementById('resultsSection').classList.add('hidden');
+      document.getElementById('emptyHint').classList.remove('hidden');
+      document.getElementById('pillsContainer').innerHTML = '';
+      document.getElementById('statsBar').innerHTML = '';
+      
+      const canvas = document.getElementById('histogramCanvas');
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    // ==================== Bulk Actions ====================
+    function copyAllResults() {
+      if (!currentResults.length) return;
+      const text = currentResults.join('\n');
+      navigator.clipboard.writeText(text).then(() => {
+        showToast(`已复制全部 ${currentResults.length} 个数值`);
+      }).catch(() => {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showToast(`已复制全部 ${currentResults.length} 个数值`);
+      });
+    }
+
+    function downloadTxt() {
+      if (!currentResults.length) return;
+      const content = currentResults.join('\r\n');
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `随机数_${new Date().toISOString().slice(0,10)}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('已导出 TXT 文件');
+    }
+
+    function downloadCsv() {
+      if (!currentResults.length) return;
+      let csv = '\uFEFF序号,数值\r\n'; // BOM for Excel
+      currentResults.forEach((val, i) => {
+        csv += `${i + 1},${val}\r\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `随机数_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('已导出 CSV 文件');
+    }
+
+    // ==================== History ====================
+    function loadHistory() {
+      try {
+        const saved = localStorage.getItem('rng_history');
+        history = saved ? JSON.parse(saved) : [];
+      } catch (e) {
+        history = [];
+      }
+    }
+
+    function saveToHistory(params, results) {
+      const entry = {
+        id: Date.now(),
+        timestamp: new Date().toISOString(),
+        params: { ...params },
+        results: [...results]
+      };
+      
+      history.unshift(entry);
+      if (history.length > 5) history = history.slice(0, 5);
+      
+      localStorage.setItem('rng_history', JSON.stringify(history));
+    }
+
+    function renderHistoryList() {
+      const container = document.getElementById('historyList');
+      container.innerHTML = '';
+
+      if (!history.length) {
+        container.innerHTML = `<div class="text-xs text-center py-6 text-slate-400">暂无历史记录</div>`;
+        return;
+      }
+
+      history.forEach((entry, index) => {
+        const el = document.createElement('div');
+        el.className = `history-item px-3 py-2 rounded-2xl border border-slate-100 dark:border-slate-700 cursor-pointer text-xs`;
+        
+        const date = new Date(entry.timestamp);
+        const timeStr = date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+        
+        const p = entry.params;
+        const seedInfo = p.seed !== null ? ` · 种子${p.seed}` : '';
+        const uniqueInfo = p.unique ? ' · 唯一' : '';
+
+        el.innerHTML = `
+          <div class="flex justify-between items-center">
+            <div>
+              <span class="font-mono font-medium">${p.lower} ~ ${p.upper}</span>
+              <span class="text-slate-400 ml-1">(${p.count}个)</span>
+            </div>
+            <div class="text-[10px] text-slate-400">${timeStr}</div>
+          </div>
+          <div class="text-slate-500 dark:text-slate-400 mt-0.5">${p.decimals}位小数${uniqueInfo}${seedInfo}</div>
+        `;
+
+        el.onclick = () => restoreFromHistory(entry, index);
+        container.appendChild(el);
+      });
+    }
+
+    function restoreFromHistory(entry) {
+      const p = entry.params;
+
+      // Restore form values
+      document.getElementById('lowerBound').value = p.lower;
+      document.getElementById('upperBound').value = p.upper;
+      document.getElementById('countInput').value = p.count;
+      document.getElementById('countSlider').value = p.count;
+      document.getElementById('countValue').textContent = p.count;
+
+      // Decimals
+      const btns = document.querySelectorAll('#decimalButtons .segmented-btn');
+      btns.forEach(b => {
+        b.classList.remove('active', 'border-yellow-400', 'dark:border-yellow-300');
+        if (parseInt(b.dataset.decimals) === p.decimals) {
+          b.classList.add('active', 'border-yellow-400', 'dark:border-yellow-300');
+        }
+      });
+
+      // Unique
+      const uniqueCheck = document.getElementById('uniqueCheck');
+      const uniqueContainer = uniqueCheck.parentElement.parentElement;
+      if (p.decimals === 0) {
+        uniqueCheck.disabled = false;
+        uniqueContainer.style.opacity = '1';
+        uniqueCheck.checked = !!p.unique;
+      } else {
+        uniqueCheck.checked = false;
+        uniqueCheck.disabled = true;
+        uniqueContainer.style.opacity = '0.5';
+      }
+
+      // Seed
+      const seedCheck = document.getElementById('seedCheck');
+      const seedInput = document.getElementById('seedInput');
+      if (p.seed !== null) {
+        seedCheck.checked = true;
+        seedInput.disabled = false;
+        seedInput.value = p.seed;
+      } else {
+        seedCheck.checked = false;
+        seedInput.disabled = true;
+        seedInput.value = '';
+      }
+
+      // Render the saved results
+      renderResults(entry.results, p);
+      showToast('已恢复历史记录');
+    }
+
+    function clearHistory() {
+      if (!history.length) return;
+      if (!confirm('确定要清空所有历史记录吗？')) return;
+      
+      history = [];
+      localStorage.removeItem('rng_history');
+      renderHistoryList();
+      showToast('历史记录已清空');
+    }
+
+    // ==================== Main Generate ====================
+    function generateNumbers() {
+      const params = validateInputs();
+      if (!params) return;
+
+      const btn = document.getElementById('generateBtn');
+      btn.disabled = true;
+      btn.style.opacity = '0.7';
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> 生成中...`;
+
+      // Use requestAnimationFrame + timeout for visual feedback
+      setTimeout(() => {
+        try {
+          const numbers = generateRandomNumbers(
+            params.lower, params.upper, params.count, 
+            params.decimals, params.unique, params.seed
+          );
+
+          renderResults(numbers, params);
+          showToast(`成功生成 ${numbers.length} 个随机数`);
+
+        } catch (err) {
+          const genErr = document.getElementById('generateError');
+          genErr.textContent = err.message || '生成失败';
+          genErr.classList.remove('hidden');
+        } finally {
+          btn.disabled = false;
+          btn.style.opacity = '1';
+          btn.innerHTML = `<i class="fa-solid fa-magic mr-1"></i> <span>生成随机数</span>`;
+        }
+      }, 40);
+    }
+
+    // ==================== Theme ====================
+    function toggleDarkMode() {
+      const isDark = document.documentElement.classList.toggle('dark');
+      localStorage.setItem('rng_dark', isDark);
+      
+      const label = document.getElementById('themeLabel');
+      label.textContent = isDark ? '浅色' : '深色';
+      
+      // Re-render histogram if visible for correct colors
+      if (!document.getElementById('resultsSection').classList.contains('hidden') && currentResults.length) {
+        setTimeout(() => {
+          renderHistogram(currentResults, currentParams ? currentParams.decimals : 0);
+        }, 80);
+      }
+    }
+
+    function initThemeToggle() {
+      const toggle = document.getElementById('darkToggle');
+      const label = document.getElementById('themeLabel');
+      
+      const isDark = document.documentElement.classList.contains('dark');
+      label.textContent = isDark ? '浅色' : '深色';
+      
+      toggle.addEventListener('click', toggleDarkMode);
+    }
+
+    // ==================== Help Modal ====================
+    function showHelp() {
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4';
+      modal.innerHTML = `
+        <div class="bg-white dark:bg-slate-800 rounded-3xl max-w-md w-full p-6 border border-slate-200 dark:border-slate-700">
+          <h3 class="font-semibold text-lg mb-3">使用说明</h3>
+          <ul class="space-y-2 text-sm text-slate-600 dark:text-slate-300">
+            <li class="flex gap-x-2"><i class="fa-solid fa-check text-emerald-500 mt-1"></i> 直接双击 index.html 即可在浏览器中打开，无需安装任何软件。</li>
+            <li class="flex gap-x-2"><i class="fa-solid fa-check text-emerald-500 mt-1"></i> 所有数据仅在本地处理，刷新页面或关闭浏览器后仍可通过历史记录恢复。</li>
+            <li class="flex gap-x-2"><i class="fa-solid fa-check text-emerald-500 mt-1"></i> 使用「随机种子」可实现完全可复现的随机序列，适合教学、考试、演示。</li>
+            <li class="flex gap-x-2"><i class="fa-solid fa-check text-emerald-500 mt-1"></i> 唯一模式仅在「整数」（0位小数）时可用，会自动避免重复。</li>
+          </ul>
+          <button onclick="this.closest('.fixed').remove()" 
+                  class="mt-6 w-full py-2.5 text-sm font-medium rounded-2xl bg-yellow-400 text-slate-900 hover:bg-yellow-300 active:bg-yellow-500 transition-colors">
+            知道了
+          </button>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+    }
+
+    // ==================== Keyboard Support ====================
+    function setupKeyboard() {
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && document.activeElement.tagName !== 'BUTTON') {
+          const resultsHidden = document.getElementById('resultsSection').classList.contains('hidden');
+          if (resultsHidden || e.ctrlKey) {
+            e.preventDefault();
+            generateNumbers();
+          }
+        }
+        if (e.key === 'Escape') {
+          const toasts = document.querySelectorAll('#toastContainer > div');
+          toasts.forEach(t => t.remove());
+        }
+      });
+    }
+
+    // ==================== Initialization ====================
+    function initializeApp() {
+      initTailwind();
+      loadHistory();
+
+      // Count controls
+      setupCountControls();
+      updateCountDisplay();
+
+      // Decimal segmented buttons
+      setupDecimalButtons();
+
+      // Advanced
+      setupAdvancedControls();
+
+      // Validation
+      setupBoundValidation();
+
+      // Theme
+      initThemeToggle();
+
+      // Keyboard
+      setupKeyboard();
+
+      // Default active decimal button already set in HTML (0)
+
+      // Restore a couple of nice defaults if user has never used
+      if (!localStorage.getItem('rng_history')) {
+        // nothing - keep clean first launch
+      } else {
+        renderHistoryList();
+      }
+
+      // Make sure unique starts disabled
+      const uniqueContainer = document.getElementById('uniqueCheck').parentElement.parentElement;
+      uniqueContainer.style.opacity = '0.5';
+
+      // Welcome toast on first visit (very light)
+      if (!localStorage.getItem('rng_seen')) {
+        setTimeout(() => {
+          // no intrusive toast on first load
+          localStorage.setItem('rng_seen', '1');
+        }, 1200);
+      }
+
+      // Expose a few helpers to console for power users / debugging
+      window.RNG = {
+        generate: generateNumbers,
+        clear: clearResults,
+        applyPreset
+      };
+
+      console.log('%c[随机数生成器] 已就绪。控制台可使用 RNG.generate() 等命令。', 'color:#64748b');
+    }
+
+    // Boot
+    window.addEventListener('DOMContentLoaded', initializeApp);
+  </script>
+</body>
+</html>
